@@ -70,16 +70,25 @@ CREATE INDEX idx_payments_invoice ON public.payments(invoice_id);
 -- ==============================================================
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+    meta_role text;
 BEGIN
+    -- Protection contre le metadata NULL et conversion en majuscule
+    meta_role := upper(coalesce(new.raw_user_meta_data->>'role', ''));
+
     INSERT INTO public.profiles (id, full_name, role)
     VALUES (
         new.id,
         COALESCE(new.raw_user_meta_data->>'full_name', 'Utilisateur Invoicify'),
-        COALESCE((new.raw_user_meta_data->>'role')::user_role, 'EMPLOYEE'::user_role)
+        CASE 
+            WHEN meta_role = 'ADMIN' THEN 'ADMIN'::user_role
+            ELSE 'EMPLOYEE'::user_role
+        END
     );
     RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
 
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
