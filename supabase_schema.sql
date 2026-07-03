@@ -95,13 +95,13 @@ BEGIN
         new.id,
         meta_name,
         CASE 
-            WHEN meta_role = 'ADMIN' THEN 'ADMIN'::user_role
-            ELSE 'EMPLOYEE'::user_role
+            WHEN meta_role = 'ADMIN' THEN 'ADMIN'::public.user_role
+            ELSE 'EMPLOYEE'::public.user_role
         END
     );
     RETURN new;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 
 CREATE TRIGGER on_auth_user_created
