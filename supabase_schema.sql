@@ -2,7 +2,17 @@
 -- SCHEMA SQL POUR INVOICIFY (SUPABASE POSTGRESQL)
 -- ==============================================================
 -- À copier-coller dans l'éditeur SQL de votre tableau de bord Supabase
--- (SQL Editor -> New Query -> Run)
+
+-- NETTOYAGE SECURISÉ (Pour repartir à zéro sans conflits)
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user CASCADE;
+DROP TABLE IF EXISTS public.payments CASCADE;
+DROP TABLE IF EXISTS public.invoice_items CASCADE;
+DROP TABLE IF EXISTS public.invoices CASCADE;
+DROP TABLE IF EXISTS public.profiles CASCADE;
+DROP TYPE IF EXISTS user_role CASCADE;
+DROP TYPE IF EXISTS invoice_status CASCADE;
+DROP TYPE IF EXISTS payment_status CASCADE;
 
 -- 1. ENUMS & ROLES
 CREATE TYPE user_role AS ENUM ('ADMIN', 'EMPLOYEE');
@@ -71,15 +81,19 @@ CREATE INDEX idx_payments_invoice ON public.payments(invoice_id);
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
-    meta_role text;
+    meta_role text := '';
+    meta_name text := 'Utilisateur Invoicify';
 BEGIN
-    -- Protection contre le metadata NULL et conversion en majuscule
-    meta_role := upper(coalesce(new.raw_user_meta_data->>'role', ''));
+    -- S'il y a des métadonnées, on extrait proprement
+    IF new.raw_user_meta_data IS NOT NULL THEN
+        meta_role := upper(coalesce(new.raw_user_meta_data->>'role', ''));
+        meta_name := coalesce(new.raw_user_meta_data->>'full_name', 'Utilisateur Invoicify');
+    END IF;
 
     INSERT INTO public.profiles (id, full_name, role)
     VALUES (
         new.id,
-        COALESCE(new.raw_user_meta_data->>'full_name', 'Utilisateur Invoicify'),
+        meta_name,
         CASE 
             WHEN meta_role = 'ADMIN' THEN 'ADMIN'::user_role
             ELSE 'EMPLOYEE'::user_role
