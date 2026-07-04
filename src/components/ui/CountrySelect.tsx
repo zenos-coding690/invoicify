@@ -6,20 +6,21 @@ export const COUNTRIES = [
   { code: 'CI', name: 'Côte d\'Ivoire', flag: '🇨🇮', currency: 'XOF' },
   { code: 'FR', name: 'France', flag: '🇫🇷', currency: 'EUR' },
   { code: 'US', name: 'États-Unis', flag: '🇺🇸', currency: 'USD' },
+  { code: 'GA', name: 'Gabon', flag: '🇬🇦', currency: 'XAF' },
+  { code: 'CD', name: 'RD Congo', flag: '🇨🇩', currency: 'CDF' },
+  { code: 'BJ', name: 'Bénin', flag: '🇧🇯', currency: 'XOF' },
 ];
 
-interface CountrySelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
-  // custom props if needed
-}
+interface CountrySelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {}
 
 export function CountrySelect({ className, ...props }: CountrySelectProps) {
   return (
     <div className="relative">
       <select 
-        className={`w-full appearance-none bg-white border border-slate-200 text-slate-700 py-3 px-4 pr-10 rounded-xl hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-[#1062FE]/20 focus:border-[#1062FE] transition-colors shadow-sm ${className || ''}`}
+        className={`w-full appearance-none bg-slate-800/50 border border-slate-700/50 text-slate-200 py-3 px-4 pr-10 rounded-xl hover:border-indigo-500/30 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all shadow-sm text-sm font-medium ${className || ''}`}
         {...props}
       >
-        <option value="" disabled selected>Sélectionner le pays du client</option>
+        <option value="" disabled>Sélectionner le pays du client</option>
         {COUNTRIES.map(c => (
           <option key={c.code} value={c.code}>
             {c.flag} {c.name} ({c.currency})
