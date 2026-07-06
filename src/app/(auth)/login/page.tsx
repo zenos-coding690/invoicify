@@ -47,6 +47,13 @@ export default function LoginPage() {
           .eq('id', data.user.id)
           .single();
 
+        // Enregistrer la trace de connexion
+        await supabase.from('activity_logs').insert({
+          user_id: data.user.id,
+          action_type: 'LOGIN',
+          details: 'S\'est connecté(e) au système'
+        });
+
         if (profile?.role === 'ADMIN') {
           router.push('/dashboard');
         } else {

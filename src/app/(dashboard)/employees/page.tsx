@@ -94,7 +94,7 @@ export default function EmployeesPage() {
         }));
         setEmployees(formattedEmployees);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error loading employees:", err);
     } finally {
       setLoading(false);

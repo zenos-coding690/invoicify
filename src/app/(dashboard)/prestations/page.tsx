@@ -204,6 +204,13 @@ export default function PrestationsPage() {
           .insert(itemsToInsert);
 
         if (itemsError) throw itemsError;
+
+        // Log the creation
+        await supabase.from('activity_logs').insert({
+          user_id: userId,
+          action_type: 'CREATE_INVOICE',
+          details: `A généré la facture ${invoiceData.invoice_number} de ${new Intl.NumberFormat('fr-FR').format(draftTotal)} ${selectedCurrency}`
+        });
       }
 
       setDraftItems([]);

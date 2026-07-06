@@ -1,58 +1,62 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Serveur-side supabase client with Service Role to bypass RLS
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-// Attention: ici on devrait utiliser le SERVICE_ROLE_KEY pour écrire depuis le backend,
-// mais vu que nous avons RLS qui autorise l'utilisateur courant, 
-// on peut aussi passer le token d'auth du client si on le transmet dans la requête.
-// Pour simplifier et être sûr de l'enregistrement, on va utiliser la clé publique, 
-// MAIS on aura besoin de passer le jeton d'accès ou d'autoriser l'insertion.
-// Le plus simple pour un endpoint /api est d'utiliser la service_role key. 
-// Vu qu'on n'en a pas, on va renvoyer les données au frontend qui se chargera d'écrire en base avec son client authentifié.
 
 export async function POST(req: Request) {
   try {
     const { amount, currency, email, name, description, invoice_number } = await req.json();
 
-    if (!amount || !currency) {
+    if (!amount) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    // L'URL absolue de notre site pour que PayDunya puisse nous rediriger ou nous envoyer le statut
+    // En développement, on prend le host depuis les headers (localhost:3000)
+    const host = req.headers.get('host') || 'localhost:3000';
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    const baseUrl = `${protocol}://${host}`;
+
     const payload = {
-      email: email || "customer@invoicify.com",
-      currency: currency,
-      amount: amount,
-      description: description || "Paiement de facture",
-      reference: invoice_number,
-      customer: {
-        name: name || "Client Invoicify",
-        email: email || "customer@invoicify.com"
+      invoice: {
+        total_amount: amount,
+        description: description || "Paiement de facture"
+      },
+      store: {
+        name: "Invoicify",
+        website_url: baseUrl
+      },
+      custom_data: {
+        invoice_number: invoice_number
+      },
+      actions: {
+        cancel_url: `${baseUrl}/prestations`,
+        return_url: `${baseUrl}/prestations?status=success`,
+        callback_url: `${baseUrl}/api/webhooks/paydunya`
       }
     };
 
-    const notchPayRes = await fetch('https://api.notchpay.co/payments/initialize', {
+    const paydunyaRes = await fetch('https://app.paydunya.com/api/v1/checkout-invoice/create', {
       method: 'POST',
       headers: {
-        'Authorization': process.env.NEXT_PUBLIC_NOTCHPAY_PUBLIC_KEY || '',
+        'PAYDUNYA-MASTER-KEY': process.env.PAYDUNYA_MASTER_KEY || '',
+        'PAYDUNYA-PRIVATE-KEY': process.env.PAYDUNYA_PRIVATE_KEY || '',
+        'PAYDUNYA-TOKEN': process.env.PAYDUNYA_TOKEN || '',
         'Accept': 'application/json',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload)
     });
 
-    const data = await notchPayRes.json();
+    const data = await paydunyaRes.json();
 
-    if (!notchPayRes.ok) {
-      console.error("NotchPay API Error:", data);
-      return NextResponse.json({ error: data.message || "Error from NotchPay" }, { status: notchPayRes.status });
+    if (data.response_code !== "00") {
+      console.error("PayDunya API Error:", data);
+      return NextResponse.json({ error: data.response_text || "Erreur PayDunya" }, { status: 400 });
     }
 
-    // data.authorization_url contient le lien de paiement
-    // data.transaction.reference contient la référence
+    // PayDunya renvoie l'URL de la page de paiement dans data.response_text
+    // et un token (qui identifie la transaction).
     return NextResponse.json({
-      payment_url: data.authorization_url,
-      reference: data.transaction?.reference || invoice_number,
+      payment_url: data.response_text,
+      reference: data.token,
       raw_data: data
     });
 

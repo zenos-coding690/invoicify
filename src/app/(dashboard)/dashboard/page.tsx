@@ -7,15 +7,12 @@ import { TrendingUp, Users, Wallet, Activity, ArrowUpRight, Lock, BarChart3 } fr
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-interface RecentActivity {
+interface ActivityLog {
   id: string;
-  invoice_number: string;
-  user: string;
-  title: string;
-  amount: number;
-  currency: string;
-  status: 'DRAFT' | 'PENDING' | 'PAID' | 'CANCELLED' | 'OVERDUE';
-  date: string;
+  user_name: string;
+  action_type: string;
+  details: string;
+  created_at: string;
 }
 
 export default function DashboardPage() {
@@ -28,7 +25,7 @@ export default function DashboardPage() {
   const [totalCA, setTotalCA] = useState(0);
   const [employeesCount, setEmployeesCount] = useState(0);
   const [conversionRate, setConversionRate] = useState(0);
-  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -79,31 +76,26 @@ export default function DashboardPage() {
           const totalRelevant = paidCount + pendingCount;
           const rate = totalRelevant > 0 ? Math.round((paidCount / totalRelevant) * 100) : 0;
           setConversionRate(rate);
+        }
 
-          const formattedActivity: RecentActivity[] = invoices.slice(0, 5).map((inv: any) => {
-            const firstItemTitle = inv.invoice_items && inv.invoice_items[0] 
-              ? inv.invoice_items[0].title 
-              : 'Prestation diverse';
-            
-            const extraItemsCount = inv.invoice_items && inv.invoice_items.length > 1
-              ? ` (+${inv.invoice_items.length - 1})`
-              : '';
+        const { data: logs, error: logsError } = await supabase
+          .from('activity_logs')
+          .select('*, profiles(full_name)')
+          .order('created_at', { ascending: false })
+          .limit(10);
 
-            return {
-              id: inv.id,
-              invoice_number: inv.invoice_number,
-              user: inv.profiles ? inv.profiles.full_name : 'Inconnu',
-              title: `${firstItemTitle}${extraItemsCount}`,
-              amount: Number(inv.total_amount),
-              currency: inv.currency,
-              status: inv.status,
-              date: new Date(inv.created_at).toLocaleDateString('fr-FR', {
-                hour: '2-digit',
-                minute: '2-digit'
-              })
-            };
-          });
-          setRecentActivity(formattedActivity);
+        if (!logsError && logs) {
+          const formattedLogs: ActivityLog[] = logs.map((log: any) => ({
+            id: log.id,
+            user_name: log.profiles?.full_name || 'Inconnu',
+            action_type: log.action_type,
+            details: log.details,
+            created_at: new Date(log.created_at).toLocaleString('fr-FR', {
+              day: '2-digit', month: '2-digit', year: 'numeric',
+              hour: '2-digit', minute: '2-digit'
+            })
+          }));
+          setActivityLogs(formattedLogs);
         }
       } catch (err) {
         console.error("Error loading dashboard data:", err);
@@ -239,35 +231,32 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Recent Activity */}
+      {/* Activity Logs */}
       <div className="space-y-4">
-        <h2 className="text-lg font-bold text-white">Activité Récente</h2>
+        <h2 className="text-lg font-bold text-white">Journal d'Activité</h2>
 
         <div className="space-y-3">
-          {recentActivity.map((act) => (
+          {activityLogs.map((log) => (
             <div 
-              key={act.id} 
+              key={log.id} 
               className="glass-light rounded-xl p-5 hover:border-indigo-500/20 transition-all duration-300 flex flex-col md:flex-row md:items-center justify-between gap-4 group"
             >
               <div className="flex items-center gap-4">
                 <div className="w-11 h-11 rounded-xl bg-slate-800/80 border border-slate-700/50 flex items-center justify-center font-bold text-xs text-slate-400 group-hover:bg-indigo-500/10 group-hover:text-indigo-400 group-hover:border-indigo-500/20 transition-all">
-                  {act.invoice_number.split('-').pop()?.substring(0, 4)}
+                  {log.action_type === 'LOGIN' ? 'LOG' : 'INV'}
                 </div>
                 <div>
-                  <h4 className="font-bold text-white text-sm">{act.title}</h4>
-                  <p className="text-xs text-slate-500 mt-0.5">Par <span className="font-semibold text-slate-400">{act.user}</span> • {act.date}</p>
+                  <h4 className="font-bold text-white text-sm">{log.user_name} <span className="text-slate-500 font-normal">a effectué une action :</span></h4>
+                  <p className="text-xs text-slate-400 mt-0.5">{log.details}</p>
                 </div>
               </div>
 
               <div className="flex items-center justify-between md:justify-end gap-5">
-                <StatusBadge status={act.status} />
-                <span className="font-bold text-white whitespace-nowrap text-sm">
-                  {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: act.currency }).format(act.amount)}
-                </span>
+                <span className="text-xs text-slate-500">{log.created_at}</span>
               </div>
             </div>
           ))}
-          {recentActivity.length === 0 && (
+          {activityLogs.length === 0 && (
             <div className="glass-light rounded-xl py-14 text-center text-slate-500 text-sm font-medium">
               Aucune activité enregistrée.
             </div>

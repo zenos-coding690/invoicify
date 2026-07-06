@@ -1,4 +1,5 @@
 import { Sidebar } from "@/components/layout/Sidebar";
+import { AdminActivityListener } from "@/components/ui/AdminActivityListener";
 
 export default function DashboardLayout({
   children,
@@ -7,6 +8,7 @@ export default function DashboardLayout({
 }) {
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-[#030712] relative">
+      <AdminActivityListener />
       {/* Global Ambient Effects */}
       <div className="fixed top-0 left-0 md:left-72 right-0 h-px bg-gradient-to-r from-indigo-500/20 via-cyan-500/10 to-transparent z-30 pointer-events-none"></div>
       <div className="fixed top-20 right-20 w-[500px] h-[500px] bg-indigo-500/[0.03] rounded-full filter blur-[100px] pointer-events-none z-0"></div>
