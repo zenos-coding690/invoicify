@@ -6,7 +6,7 @@ import { GenerateButton } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ToastNotification } from '@/components/ui/ToastNotification';
 import { createClient } from '@/lib/supabase/client';
-import { Receipt, Search, Plus, Trash2, Globe, FileSpreadsheet, ArrowUpRight, ExternalLink, Layers, Wallet, TrendingUp } from 'lucide-react';
+import { Receipt, Search, Plus, Trash2, Globe, FileSpreadsheet, ArrowUpRight, ExternalLink, Layers, Wallet, TrendingUp, Copy } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface DraftItem {
@@ -127,6 +127,11 @@ export default function PrestationsPage() {
       setLoading(false);
     }
   }
+
+  const handleCopyLink = (link: string) => {
+    navigator.clipboard.writeText(link);
+    alert("Lien de paiement copié ! Vous pouvez maintenant le coller (Ctrl+V) à votre client.");
+  };
 
   const handleAddItem = () => {
     if (!title || !price) return;
@@ -437,9 +442,14 @@ export default function PrestationsPage() {
                       {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: inv.currency }).format(inv.amount)}
                     </span>
                     {inv.payment_link && inv.status === 'PENDING' && (
-                      <a href={inv.payment_link} target="_blank" rel="noopener noreferrer" className="text-[10px] inline-flex items-center gap-1 bg-indigo-500/15 text-indigo-400 px-2.5 py-1 rounded-lg font-semibold hover:bg-indigo-500/25 transition-colors border border-indigo-500/20">
-                        <ExternalLink className="w-3 h-3" /> Lien de paiement
-                      </a>
+                      <div className="flex flex-col sm:flex-row items-center gap-2 mt-1">
+                        <a href={inv.payment_link} target="_blank" rel="noopener noreferrer" className="text-[10px] inline-flex items-center gap-1 bg-indigo-500/15 text-indigo-400 px-2.5 py-1.5 rounded-lg font-semibold hover:bg-indigo-500/25 transition-colors border border-indigo-500/20 w-full justify-center sm:w-auto">
+                          <ExternalLink className="w-3 h-3" /> Ouvrir
+                        </a>
+                        <button onClick={() => handleCopyLink(inv.payment_link!)} className="text-[10px] inline-flex items-center gap-1 bg-slate-800 text-slate-300 px-2.5 py-1.5 rounded-lg font-semibold hover:bg-slate-700 transition-colors border border-slate-700/50 cursor-pointer w-full justify-center sm:w-auto">
+                          <Copy className="w-3 h-3" /> Copier
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
