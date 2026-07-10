@@ -6,7 +6,7 @@ import { GenerateButton } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ToastNotification } from '@/components/ui/ToastNotification';
 import { createClient } from '@/lib/supabase/client';
-import { Receipt, Search, Plus, Trash2, Globe, FileSpreadsheet, ArrowUpRight, ExternalLink, Layers, Wallet, TrendingUp, Copy } from 'lucide-react';
+import { Receipt, Search, Plus, Trash2, Globe, FileSpreadsheet, ArrowUpRight, ExternalLink, Layers, Wallet, TrendingUp, Copy, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface DraftItem {
@@ -26,6 +26,7 @@ interface Invoice {
   amount: number;
   currency: string;
   payment_link?: string;
+  notchpay_reference?: string;
 }
 
 export default function PrestationsPage() {
@@ -117,7 +118,8 @@ export default function PrestationsPage() {
           amount: Number(inv.total_amount),
           currency: inv.currency,
           date: new Date(inv.created_at).toISOString().split('T')[0],
-          payment_link: inv.payment_link
+          payment_link: inv.payment_link,
+          notchpay_reference: inv.notchpay_reference
         }));
         setInvoices(formattedInvoices);
       }
@@ -131,6 +133,25 @@ export default function PrestationsPage() {
   const handleCopyLink = (link: string) => {
     navigator.clipboard.writeText(link);
     alert("Lien de paiement copié ! Vous pouvez maintenant le coller (Ctrl+V) à votre client.");
+  };
+
+  const handleVerifyPayment = async (token: string) => {
+    try {
+      const res = await fetch('/api/payments/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+      });
+      const data = await res.json();
+      if (data.success && data.status === 'PAID') {
+        alert("Paiement validé ! La facture est maintenant payée.");
+        if (userId) loadInvoices(userId);
+      } else {
+        alert("Le paiement n'a pas encore été détecté chez PayDunya. Réessayez dans un instant.");
+      }
+    } catch (err) {
+      alert("Erreur lors de la vérification.");
+    }
   };
 
   const handleAddItem = () => {
@@ -448,6 +469,9 @@ export default function PrestationsPage() {
                         </a>
                         <button onClick={() => handleCopyLink(inv.payment_link!)} className="text-[10px] inline-flex items-center gap-1 bg-slate-800 text-slate-300 px-2.5 py-1.5 rounded-lg font-semibold hover:bg-slate-700 transition-colors border border-slate-700/50 cursor-pointer w-full justify-center sm:w-auto">
                           <Copy className="w-3 h-3" /> Copier
+                        </button>
+                        <button onClick={() => handleVerifyPayment(inv.notchpay_reference || '')} className="text-[10px] inline-flex items-center gap-1 bg-emerald-500/15 text-emerald-400 px-2.5 py-1.5 rounded-lg font-semibold hover:bg-emerald-500/25 transition-colors border border-emerald-500/20 cursor-pointer w-full justify-center sm:w-auto" title="Forcer la vérification">
+                          <RefreshCw className="w-3 h-3" /> Vérifier
                         </button>
                       </div>
                     )}
